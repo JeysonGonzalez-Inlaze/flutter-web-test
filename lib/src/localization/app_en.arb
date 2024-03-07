@@ -1,0 +1,6 @@
+{
+  "appTitle": "Gannar Flutter Test",
+  "@appTitle": {
+    "description": "POC flutter web"
+  }
+}
