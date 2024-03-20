@@ -15,6 +15,8 @@ class _SocketIOScreenState extends State<SocketIOScreen> {
   var isConnected = false;
 
   List<String> messages = [];
+  Map marketSetData = {};
+  List markets = [];
 
   @override
   void initState() {
@@ -23,7 +25,7 @@ class _SocketIOScreenState extends State<SocketIOScreen> {
   }
 
   void connect() {
-    socket = IO.io('http://localhost:3000', <String, dynamic>{
+    socket = IO.io('http://localhost:3001', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
@@ -34,19 +36,25 @@ class _SocketIOScreenState extends State<SocketIOScreen> {
       setState(() {
         isConnected = true;
       });
-      print('Conectado');
     });
 
     socket.on('disconnect', (_) {
       setState(() {
         isConnected = false;
       });
-      print('Desconectado');
     });
 
-    socket.on('chat', (message) {
+    socket.on('match-summary', (message) {
       setState(() {
         messages.add(message);
+      });
+    });
+
+    socket.on('market-set', (data) {
+      setState(() {
+        marketSetData = data;
+        markets = data['markets'];
+        messages.add('Data: ${data['markets']}');
       });
     });
   }
@@ -70,16 +78,97 @@ class _SocketIOScreenState extends State<SocketIOScreen> {
                       const InputDecoration(labelText: 'Send a message'),
                 ),
               ),
+              // Expanded(
+              //   child: ListView.builder(
+              //     itemCount: messages.length,
+              //     itemBuilder: (context, index) {
+              //       return ListTile(
+              //         title: Text(messages[index]),
+              //       );
+              //     },
+              //   ),
+              // ),
+              Text('Event ID: ${marketSetData['eventId']}'),
               Expanded(
                 child: ListView.builder(
-                  itemCount: messages.length,
+                  itemCount: markets.length,
                   itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(messages[index]),
+                    final market = markets[index];
+
+                    return ExpansionTile(
+                      title: Text('Market ID: ${market['id']}'),
+                      subtitle: Text('Name: ${market['name']}'),
+                      children: [
+                        Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: <Widget>[
+                                  Text('Status: ${market['status']}'),
+                                  Text('Date: ${market['eventData']}'),
+                                  ListView.builder(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      itemCount: market['marketType']
+                                              ['selections']
+                                          .length,
+                                      itemBuilder:
+                                          (contextSelection, indexSelection) {
+                                        final selection = market['marketType']
+                                            ['selections'][indexSelection];
+                                        // return Text('Name: ${selection['name']}');
+
+                                        return ExpansionTile(
+                                            title: Text(
+                                                'Selection ID: ${selection['id']}'),
+                                            subtitle: Text(
+                                                'Name: ${selection['name']}'),
+                                            children: [
+                                              Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 16.0),
+                                                  child: Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: <Widget>[
+                                                        Text(
+                                                            'Status: ${selection['status']}'),
+                                                        Text(
+                                                            'Competitor ID: ${selection['competitorId']}'),
+                                                        Text(
+                                                            'Competitor ID: ${selection['numerator']}')
+                                                      ]))
+                                            ]);
+                                      }),
+                                ]))
+                      ],
                     );
                   },
                 ),
               ),
+              // Expanded(
+              //   child: ListView.builder(
+              //     itemCount: markets.length,
+              //     itemBuilder: (context, index) {
+              //       return Column(children: <Widget>[
+              //         Expanded(
+              //             child: ListView.builder(
+              //                 itemCount: markets[index]['selections'].length,
+              //                 itemBuilder: (context, indexSelection) {
+              //                   return ListTile(
+              //                     title: Text(markets[index]['selections']
+              //                             [indexSelection]
+              //                         .name),
+              //                   );
+              //                 }))
+              //       ]);
+              //     },
+              //   ),
+              // ),
               Center(
                 child: isConnected
                     ? const Text('Socket.IO connection is active')
